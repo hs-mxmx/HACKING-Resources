@@ -1,0 +1,28 @@
+
+ -------------------------------
+| P H Y S I C A L / F I S I C O |    * Types: V.34,S SDH, DSL, 802.11
+ -------------------------------     * Attack: Sniffing
+ 
+ ---------------------------------
+| D A T A   L I N K / E N L A C E |  * Types: Ethernet, 802.11, Fibre Channel, HDLC
+ ---------------------------------   * Attack: Spoofing
+
+ ---------------------------------
+| N E T W O R K / I N T E R N E T |  * Types: ARP, IP, ICMP, IPsec
+ ---------------------------------   * Attack: ManInTheMiddle (MITM)
+
+ ---------------------------------
+| 	T R A N S P O R T         |  * Types: TCP, UDP, TLS, SSL
+ ---------------------------------   * Attack: Reconnaissance
+
+ ---------------------------------
+| 	  S E S S I O N           |  * Types: TCP, SIP, TRP
+ ---------------------------------   * Attack: Hijacking
+
+ ---------------------------------
+|    P R E S S E N T A T I O N    |  * Types: HTML, JPG, MP3, AVI, DOC
+ ---------------------------------   * Attack: Phishing
+
+ ---------------------------------
+|      A P P L I C A T I O N      |  * Types: HTTP, TELNET, SMTP, FTP, WWW
+ ---------------------------------   * Attack: Explotation
