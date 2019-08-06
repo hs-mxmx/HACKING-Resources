@@ -35,7 +35,7 @@
 	        \/
  ---------------------------------
 |      A P P L I C A T I O N      |  * Types: HTTP, TELNET, SMTP, FTP, WWW
- ---------------------------------   * Attack: Explotation
+ ---------------------------------   * Attack: Exploitation
 
 
 						-------------------------
@@ -59,7 +59,7 @@
 	       |  |
 	        \/
  ---------------------------------
-|  M A I N T A I N   A C C E S S  |  * APTs are imitated to see if a vulneratilitie can be used to maintain access
+|  M A I N T A I N   A C C E S S  |  * APTs are imitated to see if a vulnerability can be used to maintain access
  ---------------------------------   
 	       |  |
 	        \/
