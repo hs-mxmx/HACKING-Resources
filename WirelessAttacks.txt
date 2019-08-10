@@ -1,0 +1,299 @@
+
+ ---------------------------------
+| S C A N  &  M O N I T O R I N G |
+ ---------------------------------
+
+[+] To display the wireless interfaces avaliables on the virtual machine: 	#iwconfig
+[+] Scanning for Access points:  						#iwlist wlan0 scan
+
+
+To monitor Wireless Networks and test Airmon-ng scripts we're gonna use Aircrack-ng wireless assessment suite:
+
+	#airmon-ng check
+
+	Found 3 processes that could cause trouble.
+	Kill them using 'airmon-ng check kill' before putting
+	the card in monitor mode, they will interfere by changing channels
+	and sometimes putting the interface back in managed mode
+
+	  PID Name
+	 1298 NetworkManager
+	 1389 wpa_supplicant
+	 2047 dhclient
+
+
+	#airmon-ng check kill
+	#airmon-ng start wlan0 (To switch the wireless interface into monitor mode, allowing us to capture packets not intended for us)
+
+	PHY	Interface	Driver		Chipset
+
+	phy0	wlan0mon	iwlwifi		Intel Corporation Dual Band Wireless-AC 3165 Plus Bluetooth (rev 99)
+	
+
+	#airodump-ng wlan0mon --channel 6 (To monitor the wireless interface)
+
+
+Open Wireless are a real disaster from security perspective, because anyone within antenna range of the access point can connect to the nectwork. Sensitive data may be secured by protocols like SSL, but that's not always the case.
+
+For instance, FTP traffic on an open wireless network is completely unencrpyed, and don't even need to use ARP or DNS cache poisoning to capture the packets.
+
+ -------------------------------------------------
+| W I R E D   E Q U I V A L E N T   P R I V A C Y |
+ -------------------------------------------------
+
+The fundamental problem with WEP is that flaws in its algorithm, making it possible for an attacker to recover any WEP key, which uses            Rivest Cipher 4(RC4), anyone who wants to connect to the network can use the same key, for both encryption and decrypiton. 
+
+The plaintext (unencrypted) data undergoes an exlusive or (XOR) bitwise operation with the keystream to create encrypted ciphertext.
+
+1 0 1 1 0				Plaintext	 Cipher Text
+0 1 1 0 0		                 "(XOR)"	   "(XOR)"
+---------			        KEYSTREAM	  KEYSTREAM
+1 1 0 1 0 -> (XOR Result)	       -----------	 ------------
+				      "Cipher Text"       "Plaintext"
+
+
+The shared WEP key can be either 64 or 148 bits, in either case an initialization vector (IV) makes up the first 24 bits of the key to add randomness, making the effective key length really only 40 or 124 bits.
+
+(IV) Initialization Vector -> 24 bits
+	(Key)              -> 40 / 124 bits
+
+
+[ENCRYPTION]
+
+[+] "IV" + "KEY" = "KSA" (Key-scheduling algorithm), and a pseudorandom number generator "(PRNG)" to create the keystream. "KSA" + "PRNG" = Result1
+
+[+] Integrity check Value "(ICV)" computed and concatenated with plaintext : "(ICV)" + "message" = Result2
+
+[+]  "Result1" is "(XORed)" with "Result2" -> "Result1" (XOR) "Result2" = "Cipher Text"
+
+[+] Final Block = "IV" + "Key ID" +"Cipher Text" + "ICV"
+
+
+[DECRYPTION]
+
+[+] Block = "IV" + "Key ID" + "Cipher Text" + "ICV"
+
+[+] "IV" + "KEY" = "KSA" + "PRNG" =  Result1
+
+[+] "Ciphertext" (XOR) (Result1) = message
+
+[+] "Message" -> ICV
+
+
+[WEP WEAKNESSES]
+
+Every WEP key is recoverable by an attacker armed with enough ciphertexts encrypted with the same shared key.
+
+The only cryptosystem that is truly secure is a random one-time pad, which uses specific key only once. The main trouble with WEP is that the 24-bit IV doesn't introduce enough randomness, it has at most "2²⁴".
+
+By passively listenning for traffic, an attacker can gather enough packets to permform cryptoanalysis and recover the key.
+
+The ICV that attempts to keep attackers from intercepting the encrypted message, is Redundancy Check 32 ("CRC-32"), linear algorithm, flipping ICV, and an attacker with knowledge of how "CRC-32" is calculateed could cause a modified message to be accepted.
+
+We can use Aircrack-ng to recover shared key from a wireless network secured with WEP:
+
+
+[CRACKING WEP KEYS WITH AIRCRACK-NG]
+
+There are multiple ways to crack WEP keys, including the fake authentification attack, fragmentation attack, chopchop attack, caffé latte attaack, and PTW attack.
+
+	#airodumo-ng -w book wlan0mon --channel 6
+	
+We will gather all information we need to begin a WEP attack against the base station. ("BSSID", "WIRELESS CHANNEL", "ENCRYPTION ALGORITHM", "SSID")
+
+[+] Injecting packets:
+
+To crack a 64-bit WEP key, we need about 250.000 "IVs", and for a 148-bit WEP key, about "1.500.000".
+
+We need to authenticate, because if our MAC address isn't authenticate with the access point, any packet we send will be dropped, and we'll receive a deauthentication request. (Use Aireplay-ng to fake authentication with the access point to trick it into responding our injected packets)
+
+By using fake authentication, we tell the acess point we're ready to prove we know the WEP key. 
+
+
+	#aireplay-ng -1 0 -e linksys -a 00:11:22:33:"AA":"BB": -h 00:11:22:33:44:55 wlan0mon
+	
+	-1: Fake auth
+         0: Retransmission time
+	-e: SSID, linksys (example)
+	-a: MAC address of the access point
+	-h: MAC of our card
+ -wlan0mon: The interface to use for the fake auth
+
+	# Association Successful :-) (AID: 1)
+
+
+[+] Generating IVs with the ARP Request Relay Attack
+
+Now we can capture and rebroadcast legitimate packets from the properly authenticaated clients (we wont be able to send traffic without sending the WEP key, but we can rebroadcast)
+
+ARP Request Replay attack allow us to generate IVs quickly by having Aireplay-ng listen for an ARP request and then retransmit it back to the base station. Aireplay-ng will rebroadcast the same ARP packet repeatedly, and each time, it will have new IV.
+
+
+	# aireplay-ng -3 -b 00:11:22:33:"AA":"BB" -h 00:11:22:33:44:55 WLAN0MON
+
+	-3: Performs the ARP request replay attack
+
+
+[+] Generating an ARP Request
+
+To generate ARP request, we'll use the host system as a simulated client by pinging and IP address on the network from the connected host system.
+
+In case the aireplay-ng -3 says "Got adeadauth/disassoc" or something, we need to run again the fake association.
+
+
+[+] Cracking the key
+
+We need about 250.000 IVs to crack a 64-bit WEP key, it should take a few minutes to collect enough IVs. 
+
+Once we've collected enough, we can use Aircrack-ng to do the math to run the collected IVs into the correct WEP key.
+
+	
+	#aircrack-ng -b 00:11:22:33:"AA":"BB" book*.cap
+	
+	*.cap: Tells Aircrack-ng to read from all .cap files saved by Airodump-ng
+
+
+[+] (Pre-Shared Key Authentication)
+
+    [ CLIENT ]		   [ GATEWAY ]
+	|			|
+	|      Auth Request     |
+	|--------------------">"|
+	|      Auth Response	|
+	|"<"--------------------|
+	|      Auth (E.Chall)   |
+	|--------------------">"|
+	|Auth Response (E.Chall)|
+	|"<"--------------------|
+	|			|
+
+
+
+ ---------------------------------------------
+| W I - F I   P R O T E C T E D   A C C E S S |
+ ---------------------------------------------
+
+WPA replaces WEP's weak CRC-32 message integrity check with a message authentication code (MAC) algorithm, to prevent attackers from easily calculating the resulting changes to the ICV when a bit is flipped.
+
+WPA and WPA2 have their weaknesses, the most common one is the use of weak passphrases.
+
+WPA2 implements encryption protocol build specifically for wireless security called Counter Mode with Cipher Block Chaining Message Authentication Code Protocol (CCMP). CCMP is built on the Advanced Encryption Standard (AES)
+
+WPA and WPA2 support both personal and enterprise setups.
+
+- WPA and WPA2 personal uses a pre-shared key.
+- WPA and WPA2 enterprise adds an additional element called a Remote Authentication Dial-In User Service (RADIUS) server to manage client authentication.
+
+
+    [ CLIENT ]		   [ GATEWAY ]    [ RADIUS SERVER ]
+	|			|                 |
+	|   Protocol Agreement  |                 |
+	|"<"-----------------">"|                 |
+	|          Auth	        |                 |
+	|"<"--------------------|--------------">"|
+	|    Key Distribution   | Master Key Dist.|
+	|"<"-----------------">"|"<"-----------">"|
+	|       Encryption      |		  |
+	|"<"--------------------|                 |
+	|			|                 |
+
+(WPA/WPA2 Enterprise Connection)
+
+The WPA/WPA2 personal connection process is sligthly simpler than the enterprise, no RADIUS server is required so no authentication or master key step occurs. 
+
+The WPA/WPA2 personal passphrase that you enter when you connect to a secured network is static, wereas enterprise setups use dynamic keys generated by the RADIUS server.
+
+
+    [ CLIENT ]		   [ GATEWAY ]
+	|			|
+	|         ANonce        |   The PMK is gnerated from:
+	|"<"--------------------| 
+	|      SNonce + MIC	|	- Passphrase (pre-shared key PKS)
+	|--------------------">"|	- Acess point's SSID
+	|       GTK + MIC       |	- SSID length
+	|--------------------">"|	- Number of hashing interactions (4096)
+	|          ACK          |	- Resulting length in bits (256) of the generated shared key (PMK)
+	|"<"--------------------|
+	|			|
+
+
+These values are fed into a hashing algorithm called PBKDF2, which creates a 256-bit shared Key (PMK)
+
+While the passphrase (PSK) maybe DaniIsAwesome, this is not the PMK that will be used in a second phase.
+So anyone who knows the access point's SSID can use the PBKDF2 algorithm to generate the correct PMK.
+
+During the four-way handshake, a pairwise transient key (PTK) is created and used to encrpyt traffic between the access point and the client, a group transient key (GTK) is exchanged and used to encrypt broadcast traffic.
+
+	The PTK is made up of the following:
+	
+	    - Shared key (PMK)
+	    - A random number (nonce) from the access point (ANonce)
+	    - A nonce from the client (SNonce)
+	    - MAC address of the client
+	    - MAC address of the access point
+
+These values are fed into the PBKDF2 hashing algorithm, which creates the PTK.
+
+The client and the access point will share MAC addresses and nonces to generate the PTK, in addition, the client sends a message integrity code (MIC) to guard against forgery attacks.
+
+The access point independently generates the PTK based on the SNonce and MAC address sent by the client, then checks the MIC ssent by the client. If it's correct, the client has authenticated successfully, and the access point sends over the GTK plus the MIC to the client.
+
+
+[+] Cracking WPA/WPA2 Keys
+
+
+To try to guess a weak password we first need to capture the four-way handshake analysis.
+
+Recall that given the correct passphrase and the SSID of the access point, the PBKKDF2 hashing algorithm can be used to generated the shared key(PMK). 
+
+Given the PMK, we still need the ANonce, Snonce, and MAC addresses of the access point and client to calculate the PTK, if we can capture a four-way handshake from any legitimate client, we can use its MAC addresses and calculate the PTK for a given passphrase.
+
+Example: Use SSID and passhrase "password" to generate the PMK, thhen combine the generated PMK with the captured nonces and MAC addresses to calculate a PTK. If the MICs comes out like the ones captured, we know that password is the correct passphrase.
+
+
+[+] Using Aircrack-ng to Crack WPA/WPA2 Keys
+
+	#: airodump-ng -c 6 --bssid 00:11:22:33:"AA":"BB" -w pentestbook2 wlan0mon
+	
+If we see any host connected, we just need to force the host to reconnect, sending them a deauthentication request, so we will be able to capture the four-way handshake:
+	
+	#: aireplay-ng -0 1 -a 00:11:22:33:"AA":"BB" -c 12:34:56:78:"AA":"BB" wlan0mon
+
+	-0: Deauthentication
+	 1: Number of deauthentication to send
+	-a: MAC address of the base station
+	-c: MAC address of the client to deauthenticate
+
+Once we've captured the WPA2 handshake, we just need to open the .cap file with Wireshark and create a wordlist, the success of our attack against WPA2 is contingent on our ability to compare the hashed values for our passphrase with the values in the handshake.
+
+We use Aircrack-ng to test the keys in the wordlist, specifying a list with the -w option.
+
+	#: aircrack-ng -w rockyou.txt -b 00:11:22:33:44:"AA":"BB" pentestbook2*.cap  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
