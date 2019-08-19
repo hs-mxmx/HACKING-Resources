@@ -32,13 +32,14 @@ metasploit check functions -> (Includes a check function that connects to a targ
 nikto      -> (Web Application Vulnerability scanner, looks for issues such as dangerous files, outdated versions...)
 cadaver    -> (XAMPP exploitation, testing login default credentials for /webdav servers wampp:xampp)
 port scan manually -> (Try to connect via Firefox to see the data display, and connect with netcat to gain more information)
+dirb       -> (Crawler with wordlists)
+gobuster   -> (Crawler with wordlists)
 
  -------------------------------
 |    S  N  I  F  F  I  N  G     |
  -------------------------------
 
 wireshark  -> (Monitoring tool, for traffic manipulate to gain useful information on the local network)
-
 
  -------------------------------
 |   P  A  S  S  W  O  R  D  S   |
