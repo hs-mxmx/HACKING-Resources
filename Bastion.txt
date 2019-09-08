@@ -8,7 +8,8 @@
 The first thing we need to do is to gather information about our targer, in this case, 10.10.10.134:
 	#: nmap -sC -sV 10.10.10.134 -oA bastion_scan
 
-We will see that our target has some ports up (22,135,139 and 445), 445 displays a bunch of information where we can see it can be a vulnerable place to exploit to our target.
+We will see that our target has some ports up (22,135,139 and 445), 445 displays a bunch of information where we can see it 
+can be a vulnerable place to exploit to our target.
 
 	445/tcp open  microsoft-ds Windows Server 2016 Standard 14393 microsoft-ds
 	Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
@@ -35,7 +36,8 @@ We will see that our target has some ports up (22,135,139 and 445), 445 displays
 
 
 
-After looking for smb auxiliary payloads to gather information about our target, I decide to use an auxiliary payload to gather information about the smb share on the target:
+After looking for smb auxiliary payloads to gather information about our target, I decide to use an auxiliary payload 
+to gather information about the smb share on the target:
 	#: msf5 auxiliary(scanner/smb/smb_enumshares) > set RHOSTS 10.10.10.134
 
 	[+] 10.10.10.134:445      - ADMIN$ - (DS) Remote Admin
@@ -61,7 +63,8 @@ where it will ask us about root's password, but we can type any random password 
 
 
 
-(2) Inside WindowsImageBackup we find an User (L4mpje-PC), our main goal now is to get the hash trough SYSTEM and SAM files to exploit the target
+(2) Inside WindowsImageBackup we find an User (L4mpje-PC), our main goal now is to get the hash trough SYSTEM and SAM files 
+to exploit the target
 
 Once we're inside L4mpje-PC's folder we reach our first trouble, 
 
@@ -84,19 +87,25 @@ Once we're inside L4mpje-PC's folder we reach our first trouble,
 -------------------------------------------
 
 
-The Backup Directory may contain vulnerable information but we can't get into it since we're getting an error whenever we try to change our directory, so the best option here is to mount the Directory on our Kali Machine to gain access via our local machine:
+The Backup Directory may contain vulnerable information but we can't get into it since we're getting an error whenever we try 
+to change our directory, so the best option here is to mount the Directory on our Kali Machine to gain access via our 
+local machine:
 
 
 	#: mount -t cifs //10.10.10.134/Backups/WindowsImageBackup/L4mpje-PC/'Backup 2019-02-22 124351' ~/Private/Hackthebox/Bastion/smb_mount
 
 
 
-Once we mount our Directory we're able to explore it to find the main vulnerabilities (Windows Credentials) but when we reach the Backup Directory we find some vhd files, which is a file format which represents a virtual hard disk driver, so it may contain disk partitions and a file system which can contain folders and files. (Used as the hard disk of a Virtual machine), so we need to mount it in our kali machine:
+Once we mount our Directory we're able to explore it to find the main vulnerabilities (Windows Credentials) but when we reach
+the Backup Directory we find some vhd files, which is a file format which represents a virtual hard disk driver, so it may
+contain disk partitions and a file system which can contain folders and files. (Used as the hard disk of a Virtual machine), so
+we need to mount it in our kali machine:
 
 	#: guestmount --add /root/Private/Hackthebox/Bastion/smb_mount/WindowsImageBackup/L4mpje-PC/'Backup 2019-02-22 124351'/9b9cfbc4-369e-11e9-a17c-806e6f6e6963.vhd --inspector --ro ~/Private/Hackthebox/Bastion/vhd_mount/
 
 
-FINALLY WE'RE IN, we reached the point we were looking for, L4Mpje session, so we're able to exploit the hash via SYSTEM and SAM:
+FINALLY WE'RE IN, we reached the point we were looking for, L4Mpje session, so we're able to exploit the hash via SYSTEM and
+SAM:
 	
 	#: ~/Private/Hackthebox/Bastion/vhd_mount/Windows/System32/config# samdump2 SYSTEM SAM
 	
@@ -130,7 +139,8 @@ After finding our first flag, we look for PrivEsc on specific software vulnerabi
 	22-02-2019  15:01    <DIR>          mRemoteNG 
 	..
 
-mRemoteNG is an open sourrce remote connections management tool, but the main problem about this tool is that the connection user information can be obtained by the config files, so at this point we look for the log files on the AppData folder:
+mRemoteNG is an open sourrce remote connections management tool, but the main problem about this tool is that the connection
+user information can be obtained by the config files, so at this point we look for the log files on the AppData folder:
  
 
 	 Directory of C:\Users\L4mpje\AppData\Roaming\mRemoteNG 
@@ -160,7 +170,8 @@ mRemoteNG is an open sourrce remote connections management tool, but the main pr
 	me="Administrator" Domain="" Password="aEWNFV5uGcjUHF0uS17QTdT9kVqtKCPeoC0Nw5dmaPFjNQ2kt/zO5xDqE4HdVmHAowVRdC7emf7lWWA10dQKiw=="
 
 
-Now we need to look for a tool or cracker to decrypt our password and gain Administrator access on our target machine, I looked for some help on github and I found an amazing cracker -> https://github.com/mRemoteNG/mRemoteNG
+Now we need to look for a tool or cracker to decrypt our password and gain Administrator access on our target machine, I looked
+for some help on github and I found an amazing cracker -> https://github.com/mRemoteNG/mRemoteNG
 
 So now we are able to crack our crypted password and get it on plain text: 
 
