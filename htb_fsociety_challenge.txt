@@ -1,0 +1,18 @@
+
+  Tools to crack zip files:
+
+	[+] zip2john
+	[+] hashcat
+	[+] frackzip
+
+  Tools to decode:
+
+	[+] Decodify
+	[+] hURL
+	[+] Google
+	
+  Most common encode:
+	
+	[+] Base64
+	[+] UTF-8
+
