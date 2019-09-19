@@ -1,0 +1,7 @@
+
+
+	[+] pdf2john with rockyou.txt wordlist
+	[+] scan and analyze pdf
+	
+password: .-. .---- .--. ... .- -- ..- ...-- .-.. -- ----- .-. ... ...--
+crack: r1psamu3lm0rs3 -> R1PSAMU3LM0RS3
