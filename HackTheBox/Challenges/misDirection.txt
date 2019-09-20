@@ -1,0 +1,295 @@
+1/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 22
+-rw-r--r-- 1 root root 0 May  2  2018 30
+
+2/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 34
+
+3/:
+total 0
+
+4/:
+total 0
+
+5/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 16
+
+6/:
+total 0
+
+7/:
+total 0
+
+8/:
+total 0
+
+9/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 36
+
+a/:
+total 0
+
+A/:
+total 0
+
+b/:
+total 0
+
+B/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 23
+
+c/:
+total 0
+
+C/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 4
+
+d/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 13
+
+D/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 26
+
+e/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 5
+
+E/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 14
+
+f/:
+total 0
+
+F/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 19
+-rw-r--r-- 1 root root 0 May  2  2018 2
+-rw-r--r-- 1 root root 0 May  2  2018 27
+
+g/:
+total 0
+
+G/:
+total 0
+
+h/:
+total 0
+
+H/:
+total 0
+
+i/:
+total 0
+
+I/:
+total 0
+
+j/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 10
+-rw-r--r-- 1 root root 0 May  2  2018 12
+
+J/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 8
+
+k/:
+total 0
+
+K/:
+total 0
+
+l/:
+total 0
+
+L/:
+total 0
+
+m/:
+total 0
+
+M/:
+total 0
+
+n/:
+total 0
+
+N/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 11
+-rw-r--r-- 1 root root 0 May  2  2018 25
+-rw-r--r-- 1 root root 0 May  2  2018 31
+-rw-r--r-- 1 root root 0 May  2  2018 33
+
+o/:
+total 0
+
+O/:
+total 0
+
+p/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 32
+
+P/:
+total 0
+
+q/:
+total 0
+
+Q/:
+total 0
+
+r/:
+total 0
+
+R/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 3
+-rw-r--r-- 1 root root 0 May  2  2018 7
+
+s/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 24
+
+S/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 1
+
+t/:
+total 0
+
+T/:
+total 0
+
+u/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 20
+-rw-r--r-- 1 root root 0 May  2  2018 28
+
+U/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 9
+
+v/:
+total 0
+
+V/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 35
+
+w/:
+total 0
+
+W/:
+total 0
+
+x/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 15
+
+X/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 17
+-rw-r--r-- 1 root root 0 May  2  2018 21
+-rw-r--r-- 1 root root 0 May  2  2018 29
+
+y/:
+total 0
+
+Y/:
+total 0
+
+z/:
+total 0
+-rw-r--r-- 1 root root 0 May  2  2018 18
+
+Z/:
+total 0
+
+
+
+
+--------------------------------------
+0 = 6
+1 = 22 30
+2 = 34
+3 = 
+4 = 
+5 = 16
+6 = 
+7 =
+8 =
+9 = 36
+--------------------------------------
+a =
+b =
+c = 
+d = 13
+e = 5
+f = 
+g = 
+h = 
+i = 
+j = 10 12
+k = 
+l = 
+m = 
+n = 
+o = 
+p = 32
+q = 
+r = 
+s = 24
+t = 
+u = 20 28
+v = 
+w = 
+x = 15
+y = 
+z = 18
+---------------------------------------
+A = 
+B = 23
+C = 4
+D = 26
+E = 14
+F = 19 2 27
+G = 
+H = 
+I = 
+J = 8
+K = 
+L = 
+M = 11 25 31 33
+N = 
+O = 
+P = 
+Q = 
+R = 3 7
+S = 1
+T = 
+U = 9
+V = 35
+W = 
+X = 17 21 29
+Y = 
+Z = 
+---------------------------------------
+
+SFRCe0RJUjNjdEx5XzFuX1BsNDFuX1NpN2V9
+
+root@kali:~/Desktop/HTB_Challenges/misDirection# echo SFRCe0RJUjNjdEx5XzFuX1BsNDFuX1NpN2V9 | base64 --decode
+HTB{*************}
+
+
+
